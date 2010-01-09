@@ -21,12 +21,18 @@ lua_State* G_L;
 
 // prefix `gl' functions
 
-int begin(lua_State* L)
+int primitive(lua_State* L)
 {
     GLenum mode = luaL_checkinteger(L, 1);
-    glBegin(mode);
+    if(lua_isfunction(L, 2))
+    {
+        glBegin(mode);
+        lua_call(L, 0, 0);
+        glEnd();
+    }
     return 0;
 }
+
 
 int clear(lua_State* L)
 {
@@ -45,6 +51,15 @@ int clear_color(lua_State* L)
     return 0;
 }
 
+int color3d(lua_State* L)
+{
+    GLdouble red   = luaL_checknumber(L, 1);
+    GLdouble green = luaL_checknumber(L, 2);
+    GLdouble blue  = luaL_checknumber(L, 3);
+    glColor3d(red, green, blue);
+    return 0;
+}
+
 int color3dv(lua_State* L)
 {
     GLdouble rgb[3];
@@ -55,9 +70,9 @@ int color3dv(lua_State* L)
     return 0;
 }
 
-int end(lua_State* L)
+int flush(lua_State* L)
 {
-    glEnd();
+    glFlush();
     return 0;
 }
 
@@ -138,11 +153,33 @@ int create_window(lua_State* L)
 
 int init(lua_State* L)
 {
-    int     argc = lua_gettop(L);
-    char**  argv = new char*[argc];
+    if( ! lua_istable(L, 1))
+    {
+        return 0;
+    }
+
+    int argc = 0;
+    for(;;)
+    {
+        lua_rawgeti(L, 1, argc);
+        if(lua_isnil(L, -1))
+        {
+            lua_pop(L, 1);
+            break;
+        }
+        ++argc;
+    }
+
+    if(argc == 0)
+    {
+        return 0;
+    }
+
+    char** argv = new char*[argc];
+
     for(int i = 0; i < argc; ++i)
     {
-        argv[i] = const_cast<char*>(luaL_checkstring(L, i + 1));
+        argv[i] = const_cast<char*>(luaL_checkstring(L, i - argc));
     }
     glutInit(&argc, argv);
     delete[] argv;
@@ -171,6 +208,7 @@ int init_window_size(lua_State* L)
     glutInitWindowSize(width, height);
     return 0;
 }
+
 void* getFont(int font_id)
 {
     switch(font_id)
@@ -269,7 +307,7 @@ void timer(int n)
 
     lua_pushvalue(G_L, 1);
     lua_pushinteger(G_L, n);
-    lua_call(G_L, 1, 0);
+    lua_call(G_L, 2, 0);
     lua_getfield(G_L, 1, "interval");
     unsigned int interval = static_cast<unsigned int>(luaL_checkinteger(G_L, -1));
     glutTimerFunc(interval, timer, 0);
@@ -320,11 +358,12 @@ int main_loop(lua_State* L)
 
 const luaL_Reg gllib[] =
 {
-    { "begin",         begin         },
+    { "primitive",     primitive     },
     { "clear",         clear         },
     { "clear_color",   clear_color   },
+    { "color3d",       color3d       },
     { "color3dv",      color3dv      },
-    { "end",           end           },
+    { "flush",         flush         },
     { "load_identity", load_identity },
     { "ortho",         ortho         },
     { "pop_matrix",    pop_matrix    },
@@ -332,12 +371,14 @@ const luaL_Reg gllib[] =
     { "scalef",        scalef        },
     { "translatef",    translatef    },
     { "vertex2i",      vertex2i      },
+    { "viewport",      viewport      },
     { NULL,            NULL          }
 };
 
 const luaL_Reg glutlib[] =
 {
     { "create_window",        create_window        },
+    { "init",                 init                 },
     { "init_display_mode",    init_display_mode    },
     { "init_window_position", init_window_position },
     { "init_window_size",     init_window_size     },
@@ -349,9 +390,46 @@ const luaL_Reg glutlib[] =
 
 } // anonymous namespace
 
+#define REGISTER_CONST(pre, name) (lua_pushnumber(L, pre##name), lua_setfield(L, -2, #name))
+
 LUALIB_API int luaopen_glut(lua_State* L)
 {
     luaL_register(L, "gl", gllib);
+    REGISTER_CONST(GL_, POINTS);
+    REGISTER_CONST(GL_, LINES);
+    REGISTER_CONST(GL_, LINE_LOOP);
+    REGISTER_CONST(GL_, LINE_STRIP);
+    REGISTER_CONST(GL_, TRIANGLES);
+    REGISTER_CONST(GL_, TRIANGLE_STRIP);
+    REGISTER_CONST(GL_, TRIANGLE_FAN);
+    REGISTER_CONST(GL_, QUADS);
+    REGISTER_CONST(GL_, QUAD_STRIP);
+    REGISTER_CONST(GL_, POLYGON);
+
+    REGISTER_CONST(GL_, CURRENT_BIT);
+    REGISTER_CONST(GL_, POINT_BIT);
+    REGISTER_CONST(GL_, LINE_BIT);
+    REGISTER_CONST(GL_, POLYGON_BIT);
+    REGISTER_CONST(GL_, POLYGON_STIPPLE_BIT);
+    REGISTER_CONST(GL_, PIXEL_MODE_BIT);
+    REGISTER_CONST(GL_, LIGHTING_BIT);
+    REGISTER_CONST(GL_, FOG_BIT);
+    REGISTER_CONST(GL_, DEPTH_BUFFER_BIT);
+    REGISTER_CONST(GL_, ACCUM_BUFFER_BIT);
+    REGISTER_CONST(GL_, STENCIL_BUFFER_BIT);
+    REGISTER_CONST(GL_, VIEWPORT_BIT);
+    REGISTER_CONST(GL_, TRANSFORM_BIT);
+    REGISTER_CONST(GL_, ENABLE_BIT);
+    REGISTER_CONST(GL_, COLOR_BUFFER_BIT);
+    REGISTER_CONST(GL_, HINT_BIT);
+    REGISTER_CONST(GL_, EVAL_BIT);
+    REGISTER_CONST(GL_, LIST_BIT);
+    REGISTER_CONST(GL_, TEXTURE_BIT);
+    REGISTER_CONST(GL_, SCISSOR_BIT);
+    REGISTER_CONST(GL_, ALL_ATTRIB_BITS);
+
     luaL_register(L, "glut", glutlib);
+    REGISTER_CONST(GLUT_, RGBA);
+
     return 1;
 }
