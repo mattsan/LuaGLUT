@@ -308,9 +308,14 @@ void timer(int n)
     lua_pushvalue(G_L, 1);
     lua_pushinteger(G_L, n);
     lua_call(G_L, 2, 0);
-    lua_getfield(G_L, 1, "interval");
-    unsigned int interval = static_cast<unsigned int>(luaL_checkinteger(G_L, -1));
-    glutTimerFunc(interval, timer, 0);
+    lua_getfield(G_L, 1, "timer_enabled");
+    if(lua_toboolean(G_L, -1))
+    {
+        lua_getfield(G_L, 1, "interval");
+        unsigned int interval = static_cast<unsigned int>(luaL_checkinteger(G_L, -1));
+        glutTimerFunc(interval, timer, 0);
+        lua_pop(G_L, 1);
+    }
     lua_pop(G_L, 1);
 }
 
@@ -390,46 +395,55 @@ const luaL_Reg glutlib[] =
 
 } // anonymous namespace
 
-#define REGISTER_CONST(pre, name) (lua_pushnumber(L, pre##name), lua_setfield(L, -2, #name))
+#define REGISTER_CONST(L, pre, name) (lua_pushnumber(L, pre##name), lua_setfield(L, -2, #name))
 
 LUALIB_API int luaopen_glut(lua_State* L)
 {
     luaL_register(L, "gl", gllib);
-    REGISTER_CONST(GL_, POINTS);
-    REGISTER_CONST(GL_, LINES);
-    REGISTER_CONST(GL_, LINE_LOOP);
-    REGISTER_CONST(GL_, LINE_STRIP);
-    REGISTER_CONST(GL_, TRIANGLES);
-    REGISTER_CONST(GL_, TRIANGLE_STRIP);
-    REGISTER_CONST(GL_, TRIANGLE_FAN);
-    REGISTER_CONST(GL_, QUADS);
-    REGISTER_CONST(GL_, QUAD_STRIP);
-    REGISTER_CONST(GL_, POLYGON);
+    REGISTER_CONST(L, GL_, POINTS);
+    REGISTER_CONST(L, GL_, LINES);
+    REGISTER_CONST(L, GL_, LINE_LOOP);
+    REGISTER_CONST(L, GL_, LINE_STRIP);
+    REGISTER_CONST(L, GL_, TRIANGLES);
+    REGISTER_CONST(L, GL_, TRIANGLE_STRIP);
+    REGISTER_CONST(L, GL_, TRIANGLE_FAN);
+    REGISTER_CONST(L, GL_, QUADS);
+    REGISTER_CONST(L, GL_, QUAD_STRIP);
+    REGISTER_CONST(L, GL_, POLYGON);
 
-    REGISTER_CONST(GL_, CURRENT_BIT);
-    REGISTER_CONST(GL_, POINT_BIT);
-    REGISTER_CONST(GL_, LINE_BIT);
-    REGISTER_CONST(GL_, POLYGON_BIT);
-    REGISTER_CONST(GL_, POLYGON_STIPPLE_BIT);
-    REGISTER_CONST(GL_, PIXEL_MODE_BIT);
-    REGISTER_CONST(GL_, LIGHTING_BIT);
-    REGISTER_CONST(GL_, FOG_BIT);
-    REGISTER_CONST(GL_, DEPTH_BUFFER_BIT);
-    REGISTER_CONST(GL_, ACCUM_BUFFER_BIT);
-    REGISTER_CONST(GL_, STENCIL_BUFFER_BIT);
-    REGISTER_CONST(GL_, VIEWPORT_BIT);
-    REGISTER_CONST(GL_, TRANSFORM_BIT);
-    REGISTER_CONST(GL_, ENABLE_BIT);
-    REGISTER_CONST(GL_, COLOR_BUFFER_BIT);
-    REGISTER_CONST(GL_, HINT_BIT);
-    REGISTER_CONST(GL_, EVAL_BIT);
-    REGISTER_CONST(GL_, LIST_BIT);
-    REGISTER_CONST(GL_, TEXTURE_BIT);
-    REGISTER_CONST(GL_, SCISSOR_BIT);
-    REGISTER_CONST(GL_, ALL_ATTRIB_BITS);
+    REGISTER_CONST(L, GL_, CURRENT_BIT);
+    REGISTER_CONST(L, GL_, POINT_BIT);
+    REGISTER_CONST(L, GL_, LINE_BIT);
+    REGISTER_CONST(L, GL_, POLYGON_BIT);
+    REGISTER_CONST(L, GL_, POLYGON_STIPPLE_BIT);
+    REGISTER_CONST(L, GL_, PIXEL_MODE_BIT);
+    REGISTER_CONST(L, GL_, LIGHTING_BIT);
+    REGISTER_CONST(L, GL_, FOG_BIT);
+    REGISTER_CONST(L, GL_, DEPTH_BUFFER_BIT);
+    REGISTER_CONST(L, GL_, ACCUM_BUFFER_BIT);
+    REGISTER_CONST(L, GL_, STENCIL_BUFFER_BIT);
+    REGISTER_CONST(L, GL_, VIEWPORT_BIT);
+    REGISTER_CONST(L, GL_, TRANSFORM_BIT);
+    REGISTER_CONST(L, GL_, ENABLE_BIT);
+    REGISTER_CONST(L, GL_, COLOR_BUFFER_BIT);
+    REGISTER_CONST(L, GL_, HINT_BIT);
+    REGISTER_CONST(L, GL_, EVAL_BIT);
+    REGISTER_CONST(L, GL_, LIST_BIT);
+    REGISTER_CONST(L, GL_, TEXTURE_BIT);
+    REGISTER_CONST(L, GL_, SCISSOR_BIT);
+    REGISTER_CONST(L, GL_, ALL_ATTRIB_BITS);
 
     luaL_register(L, "glut", glutlib);
-    REGISTER_CONST(GLUT_, RGBA);
+    REGISTER_CONST(L, GLUT_, RGBA);
+    REGISTER_CONST(L, GLUT_, DOUBLE);
+    REGISTER_CONST(L, GLUT_, KEY_LEFT);
+    REGISTER_CONST(L, GLUT_, KEY_UP);
+    REGISTER_CONST(L, GLUT_, KEY_RIGHT);
+    REGISTER_CONST(L, GLUT_, KEY_DOWN);
+    lua_pushnumber(L, STROKE_ROMAN);
+    lua_setfield(L, -2, "STROKE_ROMAN");
+    lua_pushnumber(L, STROKE_MONO_ROMAN);
+    lua_setfield(L, -2, "STROKE_MONO_ROMAN");
 
     return 1;
 }
